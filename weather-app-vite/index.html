@@ -3,35 +3,61 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Weather Forecast</title>
+    <title>Weatherly | Modern Weather App</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/src/styles.css">
   </head>
   <body>
-    <div class="container">
-      <header>
-        <h1><i class="fas fa-cloud-sun"></i> Weather Forecast</h1>
-        <div class="search-container">
-          <input type="text" id="cityInput" placeholder="Enter city name..." />
-          <button onclick="getWeather()"><i class="fas fa-search"></i></button>
+    <div class="app-container">
+      <div class="background-animation"></div>
+      
+      <header class="app-header">
+        <div class="header-content">
+          <div class="logo-container">
+            <i class="fas fa-cloud-sun logo-icon"></i>
+            <h1>Weatherly</h1>
+          </div>
+          <p class="app-tagline">Your personal weather forecast</p>
         </div>
       </header>
 
-      <main>
-        <div class="weather-card" id="currentWeather">
-          <div class="loading" id="loading">Loading...</div>
-          <div class="weather-content" id="weatherResult"></div>
+      <main class="app-main">
+        <div class="search-container glass-card">
+          <div class="search-input-container">
+            <input type="text" id="cityInput" placeholder="Search for a city..." />
+            <button class="search-button" onclick="getWeather()">
+              <i class="fas fa-search"></i>
+            </button>
+            <button class="location-button" title="Use my location" onclick="getCurrentLocationWeather()">
+              <i class="fas fa-location-arrow"></i>
+            </button>
+          </div>
         </div>
-        
-        <div class="forecast-container" id="forecastContainer">
-          <h2>5-Day Forecast</h2>
-          <div class="forecast-cards" id="forecastCards"></div>
+
+        <div class="weather-display">
+          <div class="current-weather glass-card" id="currentWeather">
+            <div class="loading-spinner" id="loading">
+              <div class="spinner"></div>
+              <p>Loading weather data...</p>
+            </div>
+            <div class="weather-content" id="weatherResult"></div>
+          </div>
+          
+          <div class="weather-details glass-card">
+            <h2 class="details-title"><i class="fas fa-info-circle"></i> Weather Details</h2>
+            <div class="details-grid" id="weatherDetails"></div>
+          </div>
+          
+          <div class="forecast-container glass-card" id="forecastContainer">
+            <h2 class="forecast-title"><i class="fas fa-calendar-alt"></i> 5-Day Forecast</h2>
+            <div class="forecast-cards" id="forecastCards"></div>
+          </div>
         </div>
       </main>
       
-      <footer>
-        <p>© 2023 Weather Forecast App</p>
+      <footer class="app-footer">
+        <p>© 2023 Weatherly | Powered by OpenWeatherMap</p>
       </footer>
     </div>
 

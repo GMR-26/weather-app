@@ -3,6 +3,7 @@ const apiKey = import.meta.env.VITE_API_KEY;
 // DOM Elements
 const cityInput = document.getElementById('cityInput');
 const weatherResult = document.getElementById('weatherResult');
+const weatherDetails = document.getElementById('weatherDetails');
 const loadingElement = document.getElementById('loading');
 const forecastContainer = document.getElementById('forecastContainer');
 const forecastCards = document.getElementById('forecastCards');
@@ -24,6 +25,7 @@ const weatherIcons = {
 // Get weather for current location
 async function getCurrentLocationWeather() {
   if (navigator.geolocation) {
+    showLoading();
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
@@ -67,7 +69,7 @@ async function getWeather() {
       displayWeather(data);
       getForecast(data.coord.lat, data.coord.lon);
     } else {
-      showError('City not found. Please try another location.');
+      showError(data.message || 'City not found. Please try another location.');
     }
   } catch (error) {
     showError('Error fetching weather data. Please try again.');
@@ -95,41 +97,76 @@ function displayWeather(data) {
   hideLoading();
   
   const weatherIcon = weatherIcons[data.weather[0].main.toLowerCase()] || 'fa-cloud';
-  const feelsLikeDiff = data.main.feels_like - data.main.temp;
-  const feelsLikeText = feelsLikeDiff > 2 ? ' (Much warmer)' : 
-                        feelsLikeDiff < -2 ? ' (Much cooler)' : 
-                        feelsLikeDiff > 0 ? ' (Warmer)' : 
-                        feelsLikeDiff < 0 ? ' (Cooler)' : '';
+  const temp = Math.round(data.main.temp);
+  const feelsLike = Math.round(data.main.feels_like);
+  const tempDiff = feelsLike - temp;
   
+  let tempDiffText = '';
+  if (tempDiff > 2) tempDiffText = `<div class="feels-warmer"><i class="fas fa-temperature-arrow-up"></i> Feels warmer</div>`;
+  else if (tempDiff < -2) tempDiffText = `<div class="feels-cooler"><i class="fas fa-temperature-arrow-down"></i> Feels cooler</div>`;
+  
+  // Get current time and date
+  const now = new Date();
+  const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const dateString = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
+  
+  // Main weather display
   const result = `
-    <div class="weather-icon">
-      <i class="fas ${weatherIcon}"></i>
+    <div class="weather-header">
+      <div class="weather-icon">
+        <i class="fas ${weatherIcon}"></i>
+      </div>
+      <div class="time-info">
+        <div class="current-time">${timeString}</div>
+        <div class="current-date">${dateString}</div>
+      </div>
     </div>
-    <h2>${data.name}, ${data.sys.country}</h2>
-    <div class="temp-display">${Math.round(data.main.temp)}°C</div>
-    <p>${data.weather[0].main} - ${data.weather[0].description}</p>
     
-    <div class="details">
-      <div class="detail-item">
-        <i class="fas fa-temperature-low"></i>
-        <p>Feels Like: ${Math.round(data.main.feels_like)}°C${feelsLikeText}</p>
-      </div>
-      <div class="detail-item">
-        <i class="fas fa-tint"></i>
-        <p>Humidity: ${data.main.humidity}%</p>
-      </div>
-      <div class="detail-item">
-        <i class="fas fa-wind"></i>
-        <p>Wind: ${Math.round(data.wind.speed * 3.6)} km/h</p>
-      </div>
-      <div class="detail-item">
-        <i class="fas fa-compress-alt"></i>
-        <p>Pressure: ${data.main.pressure} hPa</p>
-      </div>
+    <div class="weather-info">
+      <h2>${data.name}, ${data.sys.country}</h2>
+      <div class="current-temp">${temp}</div>
+      <p class="weather-desc">${capitalizeFirstLetter(data.weather[0].description)}</p>
+      ${tempDiffText}
     </div>
   `;
   
   weatherResult.innerHTML = result;
+  
+  // Weather details
+  const details = `
+    <div class="detail-item">
+      <i class="fas fa-temperature-low"></i>
+      <p>Feels Like</p>
+      <div class="value">${feelsLike}°C</div>
+    </div>
+    <div class="detail-item">
+      <i class="fas fa-tint"></i>
+      <p>Humidity</p>
+      <div class="value">${data.main.humidity}%</div>
+    </div>
+    <div class="detail-item">
+      <i class="fas fa-wind"></i>
+      <p>Wind Speed</p>
+      <div class="value">${Math.round(data.wind.speed * 3.6)} km/h</div>
+    </div>
+    <div class="detail-item">
+      <i class="fas fa-compress-alt"></i>
+      <p>Pressure</p>
+      <div class="value">${data.main.pressure} hPa</div>
+    </div>
+    <div class="detail-item">
+      <i class="fas fa-eye"></i>
+      <p>Visibility</p>
+      <div class="value">${data.visibility / 1000} km</div>
+    </div>
+    <div class="detail-item">
+      <i class="fas fa-cloud"></i>
+      <p>Cloudiness</p>
+      <div class="value">${data.clouds.all}%</div>
+    </div>
+  `;
+  
+  weatherDetails.innerHTML = details;
 }
 
 // Display 5-day forecast
@@ -137,21 +174,33 @@ function displayForecast(data) {
   // Group forecast by day
   const dailyForecast = {};
   data.list.forEach(item => {
-    const date = new Date(item.dt * 1000).toLocaleDateString('en-US', { weekday: 'short' });
-    if (!dailyForecast[date]) {
-      dailyForecast[date] = {
+    const date = new Date(item.dt * 1000);
+    const dateStr = date.toLocaleDateString('en-US', { weekday: 'short' });
+    
+    if (!dailyForecast[dateStr]) {
+      dailyForecast[dateStr] = {
+        date: dateStr,
         temp: [],
         weather: item.weather[0],
-        date: date
+        items: []
       };
     }
-    dailyForecast[date].temp.push(item.main.temp);
+    
+    dailyForecast[dateStr].temp.push(item.main.temp);
+    dailyForecast[dateStr].items.push(item);
   });
   
-  // Calculate average temp for each day
+  // Calculate average temp for each day and find midday forecast
   const forecastItems = Object.values(dailyForecast).slice(0, 5).map(day => {
-    const avgTemp = day.temp.reduce((sum, temp) => sum + temp, 0) / day.temp.length;
-    const weatherIcon = weatherIcons[day.weather.main.toLowerCase()] || 'fa-cloud';
+    const avgTemp = Math.round(day.temp.reduce((sum, temp) => sum + temp, 0) / day.temp.length);
+    
+    // Find a midday forecast item for better representation
+    const middayItem = day.items.find(item => {
+      const hour = new Date(item.dt * 1000).getHours();
+      return hour >= 11 && hour <= 14;
+    }) || day.items[Math.floor(day.items.length / 2)];
+    
+    const weatherIcon = weatherIcons[middayItem.weather.main.toLowerCase()] || 'fa-cloud';
     
     return `
       <div class="forecast-card">
@@ -159,8 +208,8 @@ function displayForecast(data) {
         <div class="forecast-icon">
           <i class="fas ${weatherIcon}"></i>
         </div>
-        <p>${Math.round(avgTemp)}°C</p>
-        <p>${day.weather.main}</p>
+        <div class="forecast-temp">${avgTemp}°C</div>
+        <p class="forecast-desc">${capitalizeFirstLetter(middayItem.weather.description)}</p>
       </div>
     `;
   });
@@ -169,9 +218,15 @@ function displayForecast(data) {
   forecastContainer.style.display = 'block';
 }
 
+// Helper function to capitalize first letter
+function capitalizeFirstLetter(string) {
+  return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
 function showLoading() {
-  loadingElement.style.display = 'block';
+  loadingElement.style.display = 'flex';
   weatherResult.style.display = 'none';
+  weatherDetails.innerHTML = '';
   forecastContainer.style.display = 'none';
 }
 
@@ -182,7 +237,8 @@ function hideLoading() {
 
 function showError(message) {
   hideLoading();
-  weatherResult.innerHTML = `<p class="error">${message}</p>`;
+  weatherResult.innerHTML = `<p class="error-message">${message}</p>`;
+  weatherDetails.innerHTML = '';
   forecastContainer.style.display = 'none';
 }
 
@@ -204,3 +260,4 @@ document.addEventListener('DOMContentLoaded', init);
 
 // Make functions available globally
 window.getWeather = getWeather;
+window.getCurrentLocationWeather = getCurrentLocationWeather;
